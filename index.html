@@ -35,6 +35,9 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .logo{font-size:18px;font-weight:800;letter-spacing:-.3px}
 .logo span{color:var(--optim)}
 .logo-sub{font-size:11px;color:var(--text3);margin-top:1px}
+/* фирменный знак OAZIS ESTATE — виден на экране и в PDF */
+.brand{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--optim);margin-bottom:3px}
+.brand::before{content:'';width:13px;height:13px;border-radius:4px;background:linear-gradient(135deg,var(--optim),#0e9488);box-shadow:0 1px 2px rgba(16,185,129,.4);flex-shrink:0}
 .actions{display:flex;gap:10px;flex-shrink:0}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:background .15s,border-color .15s;white-space:nowrap}
 .btn:hover{background:var(--bg)}
@@ -263,6 +266,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
   <div class="wrap">
     <div class="hdr-in">
       <div>
+        <div class="brand">OAZIS&nbsp;ESTATE</div>
         <div class="logo">🏨 <span id="hdr-name">Ризалта</span> <span>— Инвест-калькулятор</span></div>
         <div class="logo-sub">Меняйте параметры — всё пересчитывается мгновенно</div>
       </div>
