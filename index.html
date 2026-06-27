@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ризалта — Инвест-калькулятор</title>
+<style>
+:root {
+  --bg:       #f8fafc;
+  --surface:  #ffffff;
+  --border:   #e2e8f0;
+  --border-l: #f1f5f9;
+  --text:     #1e293b;
+  --text2:    #475569;
+  --text3:    #94a3b8;
+  --pessim:   #f97316;
+  --pessim-bg:#fff7ed;
+  --base:     #6366f1;
+  --base-bg:  #eef2ff;
+  --optim:    #10b981;
+  --optim-bg: #ecfdf5;
+  --r:        12px;
+  --r-sm:     8px;
+  --shadow:   0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
+
+/* ── HEADER ── */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 0;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.hdr-in{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.logo span{color:var(--optim)}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.actions{display:flex;gap:10px;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:background .15s,border-color .15s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn-green{background:var(--optim);color:#fff;border-color:var(--optim)}
+.btn-green:hover{background:#059669;border-color:#059669}
+
+/* ── CARDS ── */
+.cards{padding:16px 0 0}
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow-md);padding:13px 14px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:var(--r) var(--r) 0 0}
+.card-p::before{background:var(--pessim)}
+.card-b::before{background:var(--base)}
+.card-o::before{background:var(--optim)}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.card-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+.badge{font-size:13px;font-weight:700;padding:3px 11px;border-radius:20px}
+.bp{background:var(--pessim-bg);color:var(--pessim)}
+.bb{background:var(--base-bg);color:var(--base)}
+.bo{background:var(--optim-bg);color:var(--optim)}
+.card-big{font-size:23px;font-weight:900;letter-spacing:-.5px;line-height:1.1;margin-bottom:2px}
+.card-big-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px}
+.card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{background:var(--bg);border-radius:var(--r-sm);padding:7px 9px}
+.m-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.m-val{font-size:15px;font-weight:700}
+.m-sub{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* ── MAIN GRID ── */
+.main{display:grid;grid-template-columns:300px 1fr;gap:16px;padding:16px 0 36px;align-items:start}
+
+/* ── PARAMS ── */
+.params{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.params-hdr{padding:12px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
+.sec{border-bottom:1px solid var(--border-l)}
+.sec:last-child{border-bottom:none}
+.sec-h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;font-size:13px;font-weight:600;user-select:none}
+.sec-h:hover{background:var(--bg)}
+.chev{font-size:9px;color:var(--text3);transition:transform .2s}
+.sec.open .chev{transform:rotate(180deg)}
+.sec-body{display:none;padding:4px 16px 14px}
+.sec.open .sec-body{display:block}
+.p-row{margin-bottom:9px}
+.p-lbl{display:block;font-size:11px;color:var(--text2);margin-bottom:4px}
+.p-in{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);transition:border-color .15s}
+.p-in:focus{outline:none;border-color:var(--optim);box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+.p-calc{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--border-l);border-radius:var(--r-sm);padding:7px 10px;font-size:12px;color:var(--text2);margin-top:7px}
+.p-calc strong{font-weight:600;color:var(--text)}
+
+/* ── RESULTS ── */
+.results{display:flex;flex-direction:column;gap:16px}
+.rc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:20px;position:relative}
+.rc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px}
+.rc-h{font-size:16px;font-weight:700;margin-bottom:16px}
+
+/* ── CHART ── */
+.chart-wrap{width:100%}
+.chart-wrap svg{width:100%;height:auto;display:block}
+
+/* ── TABLE ── */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);border-bottom:2px solid var(--border)}
+.dt td{padding:9px 12px;border-bottom:1px solid var(--border-l)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--bg)}
+.num{font-weight:600;font-variant-numeric:tabular-nums}
+.cp{color:var(--pessim)} .cb{color:var(--base)} .co{color:var(--optim)}
+
+/* ── BLOCK TOGGLES ── */
+.blk-tog{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);cursor:pointer;user-select:none}
+.blk-tog input{width:15px;height:15px;margin:0;cursor:pointer;accent-color:var(--optim);flex-shrink:0}
+.rc .blk-tog{position:absolute;top:18px;right:18px}
+.card-head .card-name{flex:1}
+/* dimmed look on screen when excluded from PDF */
+.rc.off > :not(.blk-tog){opacity:.38}
+.card.off .card-name,.card.off .badge,.card.off .card-big,
+.card.off .card-big-lbl,.card.off .card-metrics{opacity:.38}
+
+.compare{border-top:1px solid var(--border);margin-top:28px;padding:22px 0 8px}
+.cmp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.cmp-title{font-size:18px;font-weight:800;color:var(--text)}
+.cmp-count{font-size:12px;font-weight:700;color:var(--text3);margin-left:6px}
+.cmp-ctrls{display:flex;align-items:center;gap:12px}
+.cmp-toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none}
+.cmp-toggle input{width:15px;height:15px;accent-color:var(--optim);cursor:pointer}
+.btn-sm{padding:6px 12px;font-size:13px}
+.cmp-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.cmp-chip{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:7px 10px}
+.cmp-chip.editing{border-color:var(--optim);box-shadow:0 0 0 2px rgba(16,185,129,.18)}
+.cmp-chip-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.cmp-chip-name{font-weight:700;font-size:13px;color:var(--text)}
+.cmp-chip-type{font-size:11px;color:var(--text3)}
+.cmp-chip-irr{font-size:11px;font-weight:700;color:var(--base);margin-left:2px}
+.cmp-chip-btn{border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3);padding:2px 4px;border-radius:5px}
+.cmp-chip-btn:hover{background:var(--border);color:var(--text)}
+.cmp-print-title{display:none}
+.cmp-tbl-wrap{overflow-x:auto}
+.cmp-tbl{width:100%}
+.cmp-tbl th{text-align:right;vertical-align:bottom}
+.cmp-tbl th:first-child,.cmp-tbl td:first-child{text-align:left}
+.cmp-th-name{font-weight:800;color:var(--text);text-transform:none;letter-spacing:0}
+.cmp-th-type{font-weight:500;color:var(--text3);font-size:10px;text-transform:none;letter-spacing:0}
+.cmp-metric{font-weight:600;color:var(--text2)}
+.cmp-tbl td.best{background:rgba(16,185,129,.12);color:var(--optim);font-weight:800}
+.cmp-chart{margin-top:16px}
+.cmp-chart svg{width:100%;height:auto;display:block}
+
+/* ── АДАПТИВ (планшет / телефон) ── */
+@media (max-width:980px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  .params,.results{min-width:0}
+  .params{position:static}
+}
+@media (max-width:600px){
+  html{font-size:13px}
+  .wrap{padding:0 14px}
+  .hdr{padding:11px 0}
+  .hdr-in{flex-wrap:wrap;gap:12px}
+  .logo{font-size:16px;line-height:1.25}
+  .actions{width:100%}
+  .actions .btn{flex:1;justify-content:center;padding:10px 12px}
+  /* карточки сценариев — остаются в СТРОКУ (3 в ряд), компактно */
+  .cards{padding:12px 0 0}
+  .cards-grid{gap:7px;align-items:stretch}
+  .card{padding:10px 8px}
+  /* шапка: [галочка + название] в строке, IRR-пилюля — отдельной строкой ниже */
+  .card-head{flex-wrap:wrap;align-items:center;gap:4px 4px;margin-bottom:6px}
+  .card-head .blk-tog input{width:13px;height:13px}
+  .card-name{flex:1 1 0;min-width:0;font-size:8px;letter-spacing:0;line-height:1.15;overflow-wrap:anywhere}
+  .badge{order:3;flex-basis:100%;width:max-content;font-size:10px;padding:2px 7px;margin-top:1px}
+  .card-big{font-size:16px;margin-bottom:1px}
+  .card-big-lbl{font-size:8px;margin-bottom:8px;line-height:1.2}
+  .card-metrics{grid-template-columns:1fr;gap:5px}
+  .metric{padding:6px 7px}
+  .m-lbl{font-size:8px}
+  .m-val{font-size:12px}
+  .rc{padding:16px;overflow-x:auto}
+  .rc-h{font-size:15px}
+  .dt{font-size:11px}
+  .dt th,.dt td{padding:6px 6px}
+  .dt th{font-size:8.5px;letter-spacing:.02em}
+}
+@media (max-width:380px){
+  .card{padding:7px 6px}
+  .card-big{font-size:14px}
+  .dt{font-size:10px}
+  .dt th,.dt td{padding:5px 5px}
+}
+
+/* ── PRINT: одна горизонтальная страница A4 ── */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{margin:8mm;size:A4 landscape}
+  html{font-size:9px}
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+
+  .hdr{position:static;box-shadow:none;border-bottom:1.5px solid #1e293b;padding:5px 0}
+  .logo{font-size:15px}
+  .logo-sub{display:none}
+  .actions{display:none!important}
+  .blk-tog{display:none!important}
+
+  .card.off,.rc.off{display:none!important}
+  .card.off .card-name,.card.off .badge,.card.off .card-big,
+  .card.off .card-big-lbl,.card.off .card-metrics,
+  .rc.off > *{opacity:1}
+
+  /* карточки сценариев */
+  .cards{padding:7px 0 0}
+  .cards-grid{display:flex;gap:7px}
+  .card{flex:1 1 0;min-width:0;padding:9px 11px;box-shadow:none;page-break-inside:avoid}
+  .card::before{height:3px}
+  .card-head{margin-bottom:6px}
+  .card-big{font-size:18px;margin-bottom:1px}
+  .card-big-lbl{margin-bottom:7px}
+  .card-metrics{gap:6px}
+  .metric{padding:6px 8px}
+  .m-val{font-size:12px}
+
+  /* параметры скрыты, результаты на всю ширину в 2 колонки */
+  .params{display:none!important}
+  .main{grid-template-columns:1fr;padding:7px 0 0}
+  .results{display:grid;grid-template-columns:1.45fr 1fr;
+           grid-template-areas:"chart rent" "chart prop";gap:8px;align-items:start}
+  .results > .rc:nth-child(1){grid-area:chart}
+  .results > .rc:nth-child(2){grid-area:rent}
+  .results > .rc:nth-child(3){grid-area:prop}
+  .rc{box-shadow:none;border:1px solid var(--border);padding:8px 10px;margin:0;page-break-inside:avoid}
+  .rc-label{margin-bottom:1px}
+  .rc-h{font-size:10.5px;margin-bottom:5px}
+  .chart-wrap svg{max-height:215px}
+  .dt{font-size:9.5px}
+  .dt th{padding:2.5px 6px;font-size:8px}
+  .dt td{padding:2.5px 6px}
+
+  .pf{display:block!important;margin-top:6px;padding-top:5px;font-size:8px}
+
+  /* ── обычный PDF: блок сравнения скрыт ── */
+  .compare{display:none!important}
+
+  /* ── PDF сравнения: показываем только лист сравнения ── */
+  body.print-compare .hdr,
+  body.print-compare .cards,
+  body.print-compare .main,
+  body.print-compare .pf{display:none!important}
+  body.print-compare .compare{display:block!important}
+  body.print-compare .compare .wrap{max-width:none;padding:0}
+  body.print-compare .cmp-head,
+  body.print-compare .cmp-list{display:none!important}
+  body.print-compare .cmp-print-title{display:block;font-size:14px;font-weight:800;color:#1e293b;margin:0 0 10px}
+  body.print-compare .cmp-tbl-wrap{overflow:visible}
+  body.print-compare .cmp-tbl{font-size:11px}
+  body.print-compare .cmp-tbl th{padding:4px 8px;font-size:9px}
+  body.print-compare .cmp-tbl td{padding:5px 8px}
+  body.print-compare .cmp-chart{margin-top:12px;page-break-inside:avoid}
+  body.print-compare .cmp-chart svg{max-height:330px}
+}
+.pf{display:none;margin-top:24px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);text-align:center}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="wrap">
+    <div class="hdr-in">
+      <div>
+        <div class="logo">🏨 <span id="hdr-name">Ризалта</span> <span>— Инвест-калькулятор</span></div>
+        <div class="logo-sub">Меняйте параметры — всё пересчитывается мгновенно</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btn-reset">↺ Сбросить</button>
+        <button class="btn" id="btn-add">➕ В сравнение</button>
+        <button class="btn btn-green" id="btn-pdf">↓ Скачать PDF</button>
+        <button class="btn btn-green" id="btn-cmp-pdf" style="display:none">↓ Сравнение</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- SCENARIO CARDS -->
+<div class="cards">
+  <div class="wrap">
+    <div class="cards-grid">
+
+      <div class="card card-p">
+        <div class="card-head">
+          <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked></label>
+          <div class="card-name">↘ Пессимистичный</div>
+          <div class="badge bp" id="c-p-irr">IRR —</div>
+        </div>
+        <div class="card-big" id="c-p-cum">—</div>
+        <div class="card-big-lbl">Накопл. прибыль за <span class="m-hz">10</span> лет</div>
+        <div class="card-metrics">
+          <div class="metric"><div class="m-lbl">Окупаемость</div><div class="m-val" id="c-p-pb">—</div><div class="m-sub">с капитализацией</div></div>
+          <div class="metric"><div class="m-lbl">Доход/мес к <span class="m-yr">2033</span></div><div class="m-val" id="c-p-r33">—</div><div class="m-sub">чистый, от аренды</div></div>
+        </div>
+      </div>
+
+      <div class="card card-b">
+        <div class="card-head">
+          <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked></label>
+          <div class="card-name">→ Базовый</div>
+          <div class="badge bb" id="c-b-irr">IRR —</div>
+        </div>
+        <div class="card-big" id="c-b-cum">—</div>
+        <div class="card-big-lbl">Накопл. прибыль за <span class="m-hz">10</span> лет</div>
+        <div class="card-metrics">
+          <div class="metric"><div class="m-lbl">Окупаемость</div><div class="m-val" id="c-b-pb">—</div><div class="m-sub">с капитализацией</div></div>
+          <div class="metric"><div class="m-lbl">Доход/мес к <span class="m-yr">2033</span></div><div class="m-val" id="c-b-r33">—</div><div class="m-sub">чистый, от аренды</div></div>
+        </div>
+      </div>
+
+      <div class="card card-o">
+        <div class="card-head">
+          <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked></label>
+          <div class="card-name">↗ Оптимистичный</div>
+          <div class="badge bo" id="c-o-irr">IRR —</div>
+        </div>
+        <div class="card-big" id="c-o-cum">—</div>
+        <div class="card-big-lbl">Накопл. прибыль за <span class="m-hz">10</span> лет</div>
+        <div class="card-metrics">
+          <div class="metric"><div class="m-lbl">Окупаемость</div><div class="m-val" id="c-o-pb">—</div><div class="m-sub">с капитализацией</div></div>
+          <div class="metric"><div class="m-lbl">Доход/мес к <span class="m-yr">2033</span></div><div class="m-val" id="c-o-r33">—</div><div class="m-sub">чистый, от аренды</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="wrap">
+  <div class="main">
+
+    <!-- LEFT: PARAMS -->
+    <div class="params">
+      <div class="params-hdr">Параметры модели</div>
+
+      <div class="sec open" id="s1">
+        <div class="sec-h" onclick="tog('s1')">🏠 Объект <span class="chev">▼</span></div>
+        <div class="sec-body">
+          <div class="p-row"><label class="p-lbl">Название проекта</label><input class="p-in" type="text" id="p-name" value="Ризалта"></div>
+          <div class="p-row"><label class="p-lbl">Тип объекта</label><input class="p-in" type="text" id="p-type" value="Апарт-отель"></div>
+          <div class="p-row"><label class="p-lbl">Площадь, м²</label><input class="p-in" type="number" id="p-area" value="26.51" step="0.01" min="10"></div>
+          <div class="p-row"><label class="p-lbl">Стоимость объекта, ₽</label><input class="p-in" type="number" id="p-price" value="10750000" step="50000" min="1000000"></div>
+          <div class="p-row"><label class="p-lbl">Ремонт под ключ, ₽</label><input class="p-in" type="number" id="p-renov" value="1325500" step="10000" min="0"></div>
+          <div class="p-calc"><span>Итого вложений</span><strong id="d-total">—</strong></div>
+          <div class="p-calc" style="margin-top:5px"><span>Цена за м²</span><strong id="d-sqm">—</strong></div>
+        </div>
+      </div>
+
+      <div class="sec" id="s2">
+        <div class="sec-h" onclick="tog('s2')">💳 Условия входа <span class="chev">▼</span></div>
+        <div class="sec-body">
+          <div class="p-row"><label class="p-lbl">Первый взнос, %</label><input class="p-in" type="number" id="p-down" value="30" step="5" min="10" max="100"></div>
+          <div class="p-row"><label class="p-lbl">Срок рассрочки, мес</label><input class="p-in" type="number" id="p-inst" value="24" step="6" min="6" max="60"></div>
+          <div class="p-calc"><span>Первый взнос</span><strong id="d-down">—</strong></div>
+          <div class="p-calc" style="margin-top:5px"><span>Остаток в рассрочку</span><strong id="d-rest">—</strong></div>
+        </div>
+      </div>
+
+      <div class="sec" id="s3">
+        <div class="sec-h" onclick="tog('s3')">📋 Операционные <span class="chev">▼</span></div>
+        <div class="sec-body">
+          <div class="p-row"><label class="p-lbl">Суточная ставка аренды, ₽</label><input class="p-in" type="number" id="p-daily" value="15000" step="500" min="1000"></div>
+          <div class="p-row"><label class="p-lbl">Расходы УК, % от выручки</label><input class="p-in" type="number" id="p-exp" value="50" step="1" min="20" max="80"></div>
+          <div class="p-row"><label class="p-lbl">Рост ставки аренды, %/год</label><input class="p-in" type="number" id="p-rg" value="9" step="1" min="0" max="25"></div>
+        </div>
+      </div>
+
+      <div class="sec" id="s4">
+        <div class="sec-h" onclick="tog('s4')">📈 Сроки, рост и загрузка <span class="chev">▼</span></div>
+        <div class="sec-body">
+          <div class="p-row"><label class="p-lbl">Начало продаж (год)</label><input class="p-in" type="number" id="p-sale" value="2026" step="1" min="2000" max="2100"></div>
+          <div class="p-row"><label class="p-lbl">Сдача объекта (год)</label><input class="p-in" type="number" id="p-done" value="2029" step="1" min="2000" max="2100"></div>
+          <div class="p-row"><label class="p-lbl">Рост в годы стройки, %/год</label><input class="p-in" type="number" id="p-gc" value="15" step="1" min="0" max="40"></div>
+          <div class="p-row"><label class="p-lbl">Рост 2 года после сдачи, %/год</label><input class="p-in" type="number" id="p-go" value="10" step="1" min="0" max="30"></div>
+          <div class="p-calc" style="margin-bottom:9px"><span>После — рост 0% (фикс.)</span><strong id="d-growth">—</strong></div>
+          <div class="p-row"><label class="p-lbl">Загрузка в 1-й год аренды, %</label><input class="p-in" type="number" id="p-occ0" value="30" step="5" min="5" max="70"></div>
+          <div class="p-row"><label class="p-lbl">Максимальная загрузка, %</label><input class="p-in" type="number" id="p-occm" value="70" step="5" min="20" max="95"></div>
+          <div class="p-row"><label class="p-lbl">Горизонт расчёта, лет</label><input class="p-in" type="number" id="p-hz" value="12" step="1" min="3" max="20"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results">
+
+      <div class="rc">
+        <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked> в&nbsp;PDF</label>
+        <div class="rc-label">Динамика</div>
+        <div class="rc-h" id="rc-chart-h">Накопленная прибыль по сценариям</div>
+        <div class="chart-wrap">
+          <svg id="svg" viewBox="0 0 680 270" xmlns="http://www.w3.org/2000/svg">
+            <g id="g-grid"></g>
+            <line id="be-line" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
+            <text id="be-txt" font-size="10" fill="#94a3b8" font-family="system-ui,sans-serif"></text>
+            <path id="pp" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <path id="pb" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <path id="po" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle id="dp33" r="5" fill="#f97316" stroke="#fff" stroke-width="2"/>
+            <circle id="db33" r="5" fill="#6366f1" stroke="#fff" stroke-width="2"/>
+            <circle id="do33" r="5" fill="#10b981" stroke="#fff" stroke-width="2"/>
+            <g id="g-legend" transform="translate(80,262)">
+              <rect x="0" y="-5" width="18" height="3" rx="1.5" fill="#f97316"/>
+              <text x="22" y="0" font-size="10" fill="#64748b" font-family="system-ui,sans-serif">Пессимистичный</text>
+              <rect x="138" y="-5" width="18" height="3" rx="1.5" fill="#6366f1"/>
+              <text x="160" y="0" font-size="10" fill="#64748b" font-family="system-ui,sans-serif">Базовый</text>
+              <rect x="228" y="-5" width="18" height="3" rx="1.5" fill="#10b981"/>
+              <text x="250" y="0" font-size="10" fill="#64748b" font-family="system-ui,sans-serif">Оптимистичный</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="rc">
+        <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked> в&nbsp;PDF</label>
+        <div class="rc-label">Пассивный доход от аренды</div>
+        <div class="rc-h">Чистый доход в месяц (после расходов УК)</div>
+        <table class="dt" id="tbl-rent"></table>
+      </div>
+
+      <div class="rc">
+        <label class="blk-tog no-print" title="Включить в PDF"><input type="checkbox" class="blk-cb" checked> в&nbsp;PDF</label>
+        <div class="rc-label">Рост стоимости объекта</div>
+        <div class="rc-h">Прогноз по базовому сценарию</div>
+        <table class="dt" id="tbl-prop"></table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<section class="compare" id="compare" style="display:none">
+  <div class="wrap">
+    <div class="cmp-head no-print">
+      <div class="cmp-title">📊 Сравнение объектов <span class="cmp-count" id="cmp-count">0 / 5</span></div>
+      <div class="cmp-ctrls">
+        <label class="cmp-toggle"><input type="checkbox" id="cmp-chart-toggle" checked> График</label>
+        <button class="btn btn-sm" id="btn-cmp-clear">Очистить всё</button>
+      </div>
+    </div>
+    <div class="cmp-list no-print" id="cmp-list"></div>
+    <div class="cmp-print-title">Сравнение объектов — базовый сценарий</div>
+    <div class="cmp-tbl-wrap"><table class="dt cmp-tbl" id="cmp-tbl"></table></div>
+    <div class="cmp-chart"><svg id="cmp-svg" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  </div>
+</section>
+<div class="pf">
+  <span id="pf-type">Апарт-отель</span> «<span id="pf-name">Ризалта</span>» | Инвест-калькулятор &nbsp;·&nbsp;
+  Расчёт носит прогнозный характер и не является офертой &nbsp;·&nbsp;
+  Дата: <span id="pf-date"></span>
+</div>
+
+<script>
+// ═══ ENGINE ═══
+function calc(p, d={}) {
+  const gc   = clamp(p.gc + (d.gc||0), 0, 50);   // рост в годы стройки
+  const go   = clamp(p.go + (d.go||0), 0, 40);   // рост 2 года после сдачи
+  const occm = clamp(p.occm + (d.occm||0), 10, 95);
+  const exp  = clamp(p.exp + (d.exp||0), 10, 85);
+  const inv  = p.price + p.renov;
+
+  const N       = clamp(Math.round(p.hz)||12, 3, 20);  // горизонт расчёта, лет
+  const now     = new Date();
+  const nowY    = now.getFullYear();
+  const nowMon  = now.getMonth() + 1;             // 1..12
+  // Введённая цена = стоимость на ТЕКУЩИЙ год. Покупка не раньше «сейчас»:
+  // если год начала продаж в прошлом — стартуем от текущего года, прошлый рост не считаем.
+  const start   = Math.max(p.sale, nowY);         // год покупки = старт таймлайна
+  const done    = p.done;        // год сдачи объекта = старт аренды
+  const postEnd = done + 1;      // фаза «после сдачи»: сам год сдачи + следующий (2 года go), затем 0%
+  // доля роста за год покупки: за остаток текущего года (по месяцам); для будущей покупки — полный год
+  const fracYr  = start === nowY ? (12 - nowMon) / 12 : 1;
+
+  let pv = p.price, rate = p.daily;
+  const rows = [];
+
+  for (let i = 0; i < N; i++) {
+    const yr = start + i;
+    // фаза роста стоимости: стройка (до года сдачи) → год сдачи и следующий по ставке go → 0%
+    const fullG = yr < done     ? gc      // полные годы стройки ДО года сдачи
+                : yr <= postEnd ? go      // год сдачи + следующий (ставка «после сдачи»)
+                : 0;
+    // вход в середине года — рост за оставшиеся месяцы только в год покупки
+    const g = yr === start ? fullG * fracYr : fullG;
+    const ap = Math.round(pv * g / 100);
+    pv += ap;
+
+    // аренда стартует в год сдачи объекта
+    const occ = yr < done  ? 0
+              : yr === done ? p.occ0
+              : Math.min(occm, p.occ0 + (yr-done)*5);
+
+    if (yr > done) rate = Math.round(rate * (1 + p.rg/100));
+
+    const gross  = Math.round(rate * (occ/100) * 360);
+    const net    = Math.round(gross * (1 - exp/100));
+    const profit = net + ap;
+    rows.push({yr, ap, gross, net, occ, rate, profit, pv});
+  }
+
+  let cum=0, pb=null;
+  rows.forEach((r,i)=>{
+    cum += r.profit; r.cum = cum;
+    if (!pb && cum >= inv) {
+      const prev = i>0 ? rows[i-1].cum : 0;
+      pb = i + (inv-prev)/r.profit;
+    }
+  });
+
+  const flows = [-inv, ...rows.map(r=>r.profit)];
+  return {rows, irr:irr(flows), pb, inv, N};
+}
+
+function irr(flows, r=0.12) {
+  for (let i=0;i<2000;i++) {
+    const f  = flows.reduce((s,cf,t)=>s+cf/Math.pow(1+r,t),0);
+    const df = flows.reduce((s,cf,t)=>s-t*cf/Math.pow(1+r,t+1),0);
+    if (Math.abs(df)<1e-10) break;
+    const nr = r - f/df;
+    if (Math.abs(nr-r)<1e-8) return nr;
+    r = clamp(nr,-0.99,10);
+  }
+  return r;
+}
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+function scenarios(p){
+  return {
+    p: calc(p,{gc:-8, go:-5, occm:-15, exp:+5}),
+    b: calc(p,{}),
+    o: calc(p,{gc:+5, go:+2, occm:+10, exp:-2}),
+  };
+}
+
+// ═══ FORMAT ═══
+const SP = ' ';
+function fR(n){
+  if(n===null||n===undefined) return '—';
+  const s = Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,SP);
+  return (n<0?'−':'')+s+SP+'₽';
+}
+function fM(n){
+  const m=n/1e6;
+  return (Math.abs(m)>=10?Math.round(m):+m.toFixed(1))+SP+'млн'+SP+'₽';
+}
+function fYr(y){
+  if(y===null||y===undefined) return '>12 лет';
+  const yr=Math.floor(y), mo=Math.round((y-yr)*12);
+  if(mo===0) return yr+' лет';
+  if(mo===12) return (yr+1)+' лет';
+  return yr+' л '+mo+' мес';
+}
+function fPct(v){return (Math.round(v*10)/10)+'%'}
+
+// ═══ PARAMS ═══
+function gp(){
+  const v=id=>parseFloat(document.getElementById(id).value)||0;
+  return {
+    area:v('p-area'), price:v('p-price'), renov:v('p-renov'),
+    down:v('p-down'), inst:v('p-inst'),
+    daily:v('p-daily'), exp:v('p-exp'), rg:v('p-rg'),
+    sale:v('p-sale'), done:v('p-done'),
+    gc:v('p-gc'), go:v('p-go'), occ0:v('p-occ0'), occm:v('p-occm'),
+    hz:v('p-hz'),
+  };
+}
+
+// ═══ RENDER ═══
+function render(){
+  const p = gp();
+  const sc = scenarios(p);
+  const inv = p.price + p.renov;
+
+  // Derived displays
+  document.getElementById('d-total').textContent = fR(inv);
+  document.getElementById('d-sqm').textContent   = p.area>0 ? fR(p.price/p.area) : '—';
+  const dn = Math.round(p.price*p.down/100);
+  document.getElementById('d-down').textContent = fR(dn);
+  document.getElementById('d-rest').textContent = fR(p.price-dn);
+
+  // Таймлайн берём из фактически рассчитанных строк (год покупки не раньше текущего)
+  const done = p.done;
+  const N = sc.b.N;                                // горизонт расчёта, лет
+  const start = sc.b.rows[0].yr;                   // год покупки = старт таймлайна
+  const endYr = sc.b.rows[sc.b.rows.length-1].yr;  // последний год прогноза
+  const mYear = Math.min(done + 4, endYr);         // ключевой год для карточек / точек графика
+  document.querySelectorAll('.m-yr').forEach(el => el.textContent = mYear);
+  document.querySelectorAll('.m-hz').forEach(el => el.textContent = N);
+  // доля роста за первый (текущий) год — как в движке, по оставшимся месяцам
+  const nowMon = new Date().getMonth() + 1;
+  const firstFrac = start === new Date().getFullYear() ? (12 - nowMon) / 12 : 1;
+  const firstPct = +(p.gc * firstFrac).toFixed(1);
+  document.getElementById('d-growth').textContent =
+    `${firstPct}% (остаток ${start}) → ${p.gc}%/год → ${p.go}% → 0%`;
+  document.getElementById('rc-chart-h').textContent =
+    `Накопленная прибыль по сценариям, ${start}–${endYr}`;
+
+  // Cards
+  [['p',sc.p],['b',sc.b],['o',sc.o]].forEach(([k,s])=>{
+    const cumN = s.rows[s.rows.length-1]?.cum ?? 0;
+    const rM   = (s.rows.find(r=>r.yr===mYear)?.net ?? 0)/12;
+    document.getElementById(`c-${k}-irr`).textContent = 'IRR '+fPct(s.irr*100);
+    document.getElementById(`c-${k}-cum`).textContent = fM(cumN);
+    document.getElementById(`c-${k}-pb`).textContent  = fYr(s.pb);
+    document.getElementById(`c-${k}-r33`).textContent = fR(Math.round(rM));
+  });
+
+  renderChart(sc, inv, mYear);
+  renderRentTbl(sc, done, endYr);
+  renderPropTbl(sc.b, p.price, start, done, endYr);
+}
+
+// ═══ SVG CHART ═══
+function renderChart(sc, inv, mYear){
+  const W=680,H=270, pL=74,pR=18,pT=20,pB=46;
+  const cW=W-pL-pR, cH=H-pT-pB;
+  const years = sc.b.rows.map(r=>r.yr);
+  const N=Math.max(2, years.length);
+
+  const allC = [...sc.p.rows,...sc.b.rows,...sc.o.rows].map(r=>r.cum);
+  const yMax = Math.ceil(Math.max(...allC)/5e6)*5e6 || 10e6;
+  const yStep = yMax<=20e6?5e6:yMax<=50e6?10e6:yMax<=100e6?20e6:30e6;
+
+  const sx = i => pL + i/(N-1)*cW;
+  const sy = v => pT + cH - v/yMax*cH;
+
+  // Grid + labels
+  let g='';
+  for(let v=0;v<=yMax;v+=yStep){
+    const y=sy(v);
+    const lbl = v===0?'0':Math.round(v/1e6)+' млн';
+    g+=`<line x1="${pL}" x2="${pL+cW}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#f1f5f9" stroke-width="1"/>`;
+    g+=`<text x="${pL-8}" y="${(y+4).toFixed(1)}" font-size="9" fill="#94a3b8" text-anchor="end" font-family="system-ui,sans-serif">${lbl}</text>`;
+  }
+  // X axis
+  years.forEach((yr,i)=>{
+    if(i%2===0||i===N-1)
+      g+=`<text x="${sx(i).toFixed(1)}" y="${(pT+cH+18).toFixed(1)}" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="system-ui,sans-serif">${yr}</text>`;
+  });
+  document.getElementById('g-grid').innerHTML=g;
+
+  // Break-even
+  const beY = sy(inv);
+  const be = document.getElementById('be-line');
+  be.setAttribute('x1',pL); be.setAttribute('x2',pL+cW);
+  be.setAttribute('y1',beY.toFixed(1)); be.setAttribute('y2',beY.toFixed(1));
+  const beT = document.getElementById('be-txt');
+  beT.setAttribute('x',pL+4); beT.setAttribute('y',(beY-5).toFixed(1));
+  beT.textContent = 'Порог окупаемости ' + fR(inv);
+
+  // Paths
+  const mkP = rows => rows.map((r,i)=>`${i===0?'M':'L'}${sx(i).toFixed(1)},${sy(r.cum).toFixed(1)}`).join(' ');
+  document.getElementById('pp').setAttribute('d', mkP(sc.p.rows));
+  document.getElementById('pb').setAttribute('d', mkP(sc.b.rows));
+  document.getElementById('po').setAttribute('d', mkP(sc.o.rows));
+
+  // Milestone dots at mYear
+  const iM=Math.max(0,Math.min(N-1, mYear - years[0]));
+  [['dp33',sc.p],['db33',sc.b],['do33',sc.o]].forEach(([id,s])=>{
+    const el=document.getElementById(id);
+    el.setAttribute('cx',sx(iM).toFixed(1));
+    el.setAttribute('cy',sy(s.rows[iM]?.cum??0).toFixed(1));
+  });
+}
+
+// равномерно выбирает до count лет в диапазоне [a..b] (включительно)
+function pickYears(a, b, count){
+  if(b<=a) return [a];
+  const step=(b-a)/(Math.min(count,b-a+1)-1);
+  const out=[];
+  for(let i=0;i<count;i++) out.push(Math.round(a+step*i));
+  return [...new Set(out)].filter(y=>y<=b);
+}
+
+// ═══ RENT TABLE ═══
+function renderRentTbl(sc, done, endYr){
+  const yrs = done>endYr ? [endYr] : pickYears(done, endYr, 5);
+  let h=`<thead><tr><th>Год</th>
+    <th style="color:var(--pessim)">Пессимистичный</th>
+    <th style="color:var(--base)">Базовый</th>
+    <th style="color:var(--optim)">Оптимистичный</th>
+  </tr></thead><tbody>`;
+  yrs.forEach(yr=>{
+    const rp=sc.p.rows.find(r=>r.yr===yr);
+    const rb=sc.b.rows.find(r=>r.yr===yr);
+    const ro=sc.o.rows.find(r=>r.yr===yr);
+    const nm = r => r?fR(Math.round(r.net/12)):'—';
+    h+=`<tr><td><strong>${yr}</strong></td>
+      <td class="num cp">${nm(rp)}</td>
+      <td class="num cb">${nm(rb)}</td>
+      <td class="num co">${nm(ro)}</td></tr>`;
+  });
+  document.getElementById('tbl-rent').innerHTML=h+'</tbody>';
+}
+
+// ═══ PROP VALUE TABLE ═══
+function renderPropTbl(base, price0, start, done, endYr){
+  const nowY     = new Date().getFullYear();
+  const firstYr  = Math.max(start, nowY);        // прошлые годы не показываем
+  // Стоимость показываем НА НАЧАЛО года = pv на конец предыдущего года.
+  // Тогда первая ступенька = рост ровно первого года (а не «склейка» двух лет).
+  const valAt = yr => {
+    if(yr<=start) return price0;                 // год покупки — введённая цена
+    const r=base.rows.find(r=>r.yr===yr-1);
+    return r ? r.pv : price0;
+  };
+  // последний год, где стоимость ещё меняется (рост идёт до postEnd=done+1,
+  // отображается на начало следующего года → +1)
+  const lastChange = Math.min(done + 2, endYr);
+  const yrs=[];
+  for(let y=firstYr; y<=lastChange; y++) yrs.push(y);
+  if(endYr>lastChange) yrs.push(endYr);          // финальный год горизонта
+  if(yrs.length===0) yrs.push(firstYr);          // подстраховка: рост уже закончился
+
+  const baseVal = valAt(firstYr);                // базис для «роста»
+  // формат процента с десятичной половиной (рус. запятая): +7,5% / +15% (без ,0)
+  const fG = v => '+'+(Math.round(v*10)/10).toString().replace('.',',')+'%';
+  // рост ИМЕННО за этот календарный год (вперёд): сколько % набежит к концу года.
+  // Берём прямо из движка: ap — прирост за год, (pv-ap) — стоимость на начало года.
+  const yoyAt = yr => {
+    const r = base.rows.find(r=>r.yr===yr);
+    if(!r) return 0;
+    const before = r.pv - r.ap;
+    return before>0 ? r.ap/before*100 : 0;
+  };
+  // стоимость на КОНЕЦ года (для «роста к покупке» — прирост уже набежал)
+  const pvEnd = yr => { const r=base.rows.find(r=>r.yr===yr); return r ? r.pv : valAt(yr); };
+
+  let h=`<thead><tr><th>Год</th><th>Стоимость объекта</th><th>Рост за год</th><th>Рост к покупке, итого</th></tr></thead><tbody>`;
+  yrs.forEach((yr,i)=>{
+    const val  = valAt(yr);
+    const g    = yoyAt(yr);
+    const yoy  = g<0.05 ? '—' : fG(g);                       // в 26 = 7,5% (набежит к концу года)
+    const gain = pvEnd(yr) - baseVal;                        // прирост к цене покупки на конец года
+    const cum  = gain<1 ? '—' : '+'+fR(gain);                // в ₽
+    h+=`<tr><td><strong>${yr}</strong></td>
+      <td class="num">${fR(val)}</td>
+      <td style="color:var(--optim);font-weight:700">${yoy}</td>
+      <td style="color:var(--optim);font-weight:700">${cum}</td></tr>`;
+  });
+  document.getElementById('tbl-prop').innerHTML=h+'</tbody>';
+}
+
+// ═══ SECTION TOGGLE ═══
+function tog(id){document.getElementById(id).classList.toggle('open')}
+
+// ═══ EVENTS ═══
+document.querySelectorAll('.p-in').forEach(el=>el.addEventListener('input',render));
+
+// project name → header + print footer + title
+function syncName(){
+  const n=(document.getElementById('p-name').value||'').trim()||'Проект';
+  const t=(document.getElementById('p-type').value||'').trim();
+  document.getElementById('hdr-name').textContent=n;
+  document.getElementById('pf-name').textContent=n;
+  document.getElementById('pf-type').textContent=t||'Объект';
+  document.title=n+' — Инвест-калькулятор';
+}
+document.getElementById('p-name').addEventListener('input',syncName);
+document.getElementById('p-type').addEventListener('input',syncName);
+
+// block on/off → include / exclude from PDF
+document.querySelectorAll('.blk-cb').forEach(cb=>{
+  cb.addEventListener('change',()=>{
+    cb.closest('.card,.rc').classList.toggle('off', !cb.checked);
+  });
+});
+
+document.getElementById('btn-reset').addEventListener('click',()=>{
+  const set=(id,v)=>document.getElementById(id).value=v;
+  set('p-name','Ризалта'); set('p-type','Апарт-отель');
+  set('p-area',26.51); set('p-price',10750000); set('p-renov',1325500);
+  set('p-down',30); set('p-inst',24);
+  set('p-daily',15000); set('p-exp',50); set('p-rg',9);
+  set('p-sale',2026); set('p-done',2029);
+  set('p-gc',15); set('p-go',10); set('p-occ0',30); set('p-occm',70);
+  set('p-hz',12);
+  document.querySelectorAll('.blk-cb').forEach(cb=>{cb.checked=true;cb.closest('.card,.rc').classList.remove('off')});
+  syncName(); render();
+});
+
+// ═══ АВТО-КОМПОНОВКА БЛОКОВ ДЛЯ PDF ═══
+// результаты пересобираются под число включённых блоков, без пустых «дыр»
+function layoutPrintResults(){
+  const res=document.querySelector('.results');
+  const rcs=[...res.querySelectorAll(':scope > .rc')];
+  const on=rcs.map(r=>!r.classList.contains('off'));
+  const [chart]=on;
+  const n=on.filter(Boolean).length;
+  // сброс инлайнов → дальше либо ставим своё, либо отдаём управление CSS
+  res.style.gridTemplateColumns='';
+  res.style.gridTemplateAreas='';
+  rcs.forEach(r=>r.style.gridArea='');
+  if(n===3) return;                                   // 3 блока — раскладка из CSS (график слева, таблицы справа)
+  res.style.gridTemplateAreas='none';
+  // отменяем именованные ячейки из CSS, иначе блоки уходят в несуществующие области
+  rcs.forEach(r=>r.style.gridArea='auto');
+  if(n<=1){ res.style.gridTemplateColumns='1fr'; return; }   // 1 блок — на всю ширину
+  res.style.gridTemplateColumns = chart ? '1.45fr 1fr' : '1fr 1fr';  // 2 блока — две колонки
+}
+function clearPrintResults(){
+  const res=document.querySelector('.results');
+  res.style.gridTemplateColumns='';
+  res.style.gridTemplateAreas='';
+  res.querySelectorAll(':scope > .rc').forEach(r=>r.style.gridArea='');
+}
+window.addEventListener('beforeprint',layoutPrintResults);
+window.addEventListener('afterprint',clearPrintResults);
+
+document.getElementById('btn-pdf').addEventListener('click',()=>{
+  document.getElementById('pf-date').textContent=new Date().toLocaleDateString('ru-RU');
+  layoutPrintResults();
+  window.print();
+  clearPrintResults();
+});
+
+// ═══ СРАВНЕНИЕ ОБЪЕКТОВ ═══
+const cmp = [];                 // снимки объектов (только сессия)
+let editId = null;              // id редактируемого объекта или null
+let cmpSeq = 0;                 // счётчик id
+const CMP_COLORS = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ef4444'];
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function cmpColor(i){return CMP_COLORS[i%CMP_COLORS.length]}
+function snapName(){return (document.getElementById('p-name').value||'').trim()||'Объект'}
+function snapType(){return (document.getElementById('p-type').value||'').trim()}
+
+function setAddBtnLabel(){
+  document.getElementById('btn-add').textContent = editId!==null ? '✓ Обновить объект' : '➕ В сравнение';
+}
+
+function addToCompare(){
+  if(editId!==null){ updateCompare(); return; }
+  if(cmp.length>=5 && !confirm('Рекомендуется сравнивать до 5 объектов. Всё равно добавить ещё один?')) return;
+  cmp.push({id:++cmpSeq, name:snapName(), type:snapType(), p:gp()});
+  renderCompare();
+}
+
+function updateCompare(){
+  const it = cmp.find(c=>c.id===editId);
+  if(it){ it.name=snapName(); it.type=snapType(); it.p=gp(); }
+  editId=null; setAddBtnLabel(); renderCompare();
+}
+
+function loadForEdit(id){
+  const it = cmp.find(c=>c.id===id);
+  if(!it) return;
+  const p=it.p, set=(eid,v)=>document.getElementById(eid).value=v;
+  set('p-name',it.name); set('p-type',it.type);
+  set('p-area',p.area); set('p-price',p.price); set('p-renov',p.renov);
+  set('p-down',p.down); set('p-inst',p.inst);
+  set('p-daily',p.daily); set('p-exp',p.exp); set('p-rg',p.rg);
+  set('p-sale',p.sale); set('p-done',p.done);
+  set('p-gc',p.gc); set('p-go',p.go); set('p-occ0',p.occ0); set('p-occm',p.occm);
+  set('p-hz',p.hz);
+  editId=id; setAddBtnLabel();
+  syncName(); render(); renderCompare();
+  document.querySelector('.main').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function removeCompare(id){
+  const i=cmp.findIndex(c=>c.id===id);
+  if(i>=0) cmp.splice(i,1);
+  if(editId===id){ editId=null; setAddBtnLabel(); }
+  renderCompare();
+}
+
+function clearCompare(){
+  cmp.length=0; editId=null; setAddBtnLabel(); renderCompare();
+}
+
+function renderCompare(){
+  const n=cmp.length;
+  document.getElementById('compare').style.display = n>=1 ? '' : 'none';
+  document.getElementById('btn-cmp-pdf').style.display = n>=1 ? '' : 'none';
+  document.getElementById('cmp-count').textContent = n+' / 5';
+  if(n<1) return;
+  renderCmpChips();
+  renderCmpTable();
+  renderCompareChart();
+}
+
+function renderCmpChips(){
+  document.getElementById('cmp-list').innerHTML = cmp.map((c,i)=>{
+    const m=calc(c.p,{});
+    return `<div class="cmp-chip${c.id===editId?' editing':''}">
+      <span class="cmp-chip-dot" style="background:${cmpColor(i)}"></span>
+      <span class="cmp-chip-name">${esc(c.name)}</span>
+      ${c.type?`<span class="cmp-chip-type">${esc(c.type)}</span>`:''}
+      <span class="cmp-chip-irr">IRR ${fPct(m.irr*100)}</span>
+      <button class="cmp-chip-btn" title="Редактировать" data-edit="${c.id}">✏️</button>
+      <button class="cmp-chip-btn" title="Удалить" data-del="${c.id}">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function renderCmpTable(){
+  const data = cmp.map(c=>{
+    const r=calc(c.p,{}), last=r.rows[r.rows.length-1];
+    return {
+      name:c.name, type:c.type,
+      inv:c.p.price+c.p.renov,
+      sqm:c.p.area>0 ? c.p.price/c.p.area : null,
+      irr:r.irr,
+      cum:last?last.cum:0,
+      pb:r.pb,
+      perMo:last?last.net/12:0,
+      pv:last?last.pv:c.p.price,
+      growth:last?(last.pv/c.p.price-1):0,
+    };
+  });
+
+  const rows = [
+    {label:'Вложения (цена + ремонт)', val:d=>fR(d.inv)},
+    {label:'Цена за м²', val:d=>d.sqm?fR(d.sqm):'—'},
+    {label:'IRR', val:d=>fPct(d.irr*100), key:d=>d.irr, best:'max'},
+    {label:'Накопл. прибыль за горизонт', val:d=>fM(d.cum), key:d=>d.cum, best:'max'},
+    {label:'Окупаемость (с капитализацией)', val:d=>fYr(d.pb), key:d=>d.pb===null?Infinity:d.pb, best:'min'},
+    {label:'Доход/мес к концу горизонта', val:d=>fR(Math.round(d.perMo)), key:d=>d.perMo, best:'max'},
+    {label:'Стоимость к концу + рост', val:d=>fR(d.pv)+' (+'+Math.round(d.growth*100)+'%)', key:d=>d.growth, best:'max'},
+  ];
+
+  let h='<thead><tr><th></th>';
+  data.forEach((d,i)=>{
+    h+=`<th><div class="cmp-th-name" style="border-bottom:2px solid ${cmpColor(i)};padding-bottom:2px;display:inline-block">${esc(d.name)}</div>`
+      + (d.type?`<div class="cmp-th-type">${esc(d.type)}</div>`:'') + '</th>';
+  });
+  h+='</tr></thead><tbody>';
+
+  rows.forEach(row=>{
+    let bestIdx=-1;
+    if(row.best && data.length>1){
+      const keys=data.map(row.key);
+      if(new Set(keys).size>1)
+        bestIdx = keys.indexOf(row.best==='max'?Math.max(...keys):Math.min(...keys));
+    }
+    h+=`<tr><td class="cmp-metric">${row.label}</td>`;
+    data.forEach((d,i)=>{ h+=`<td class="num${i===bestIdx?' best':''}">${row.val(d)}</td>`; });
+    h+='</tr>';
+  });
+  document.getElementById('cmp-tbl').innerHTML=h+'</tbody>';
+}
+
+function renderCompareChart(){
+  const on=document.getElementById('cmp-chart-toggle').checked;
+  document.querySelector('.cmp-chart').style.display = on ? '' : 'none';
+  const svg=document.getElementById('cmp-svg');
+  if(!on || cmp.length<1){ svg.innerHTML=''; return; }
+
+  const series = cmp.map((c,i)=>{
+    const r=calc(c.p,{});
+    return {name:c.name, color:cmpColor(i), pts:r.rows.map(row=>({yr:row.yr, cum:row.cum}))};
+  });
+  const allYr=series.flatMap(s=>s.pts.map(p=>p.yr));
+  const minYr=Math.min(...allYr), maxYr=Math.max(...allYr);
+  const yMaxRaw=Math.max(0, ...series.flatMap(s=>s.pts.map(p=>p.cum)));
+
+  const W=680,H=300, pL=70,pR=16,pT=16,pB=64;
+  const cW=W-pL-pR, cH=H-pT-pB;
+  const yMax=Math.ceil((yMaxRaw||5e6)/5e6)*5e6 || 5e6;
+  const yStep=yMax<=20e6?5e6:yMax<=50e6?10e6:yMax<=100e6?20e6:30e6;
+  const span=Math.max(1,maxYr-minYr);
+  const sx=yr=>pL+(yr-minYr)/span*cW;
+  const sy=v=>pT+cH - v/yMax*cH;
+
+  let s='';
+  for(let v=0;v<=yMax;v+=yStep){
+    const y=sy(v), lbl=v===0?'0':Math.round(v/1e6)+' млн';
+    s+=`<line x1="${pL}" x2="${pL+cW}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#f1f5f9" stroke-width="1"/>`;
+    s+=`<text x="${pL-8}" y="${(y+4).toFixed(1)}" font-size="9" fill="#94a3b8" text-anchor="end" font-family="system-ui,sans-serif">${lbl}</text>`;
+  }
+  for(let yr=minYr;yr<=maxYr;yr++){
+    if((yr-minYr)%2===0||yr===maxYr)
+      s+=`<text x="${sx(yr).toFixed(1)}" y="${(pT+cH+16).toFixed(1)}" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="system-ui,sans-serif">${yr}</text>`;
+  }
+  series.forEach(se=>{
+    const d=se.pts.map((p,i)=>`${i===0?'M':'L'}${sx(p.yr).toFixed(1)},${sy(p.cum).toFixed(1)}`).join(' ');
+    s+=`<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last=se.pts[se.pts.length-1];
+    if(last) s+=`<circle cx="${sx(last.yr).toFixed(1)}" cy="${sy(last.cum).toFixed(1)}" r="3.2" fill="${se.color}"/>`;
+  });
+  let lx=pL, ly=pT+cH+34;
+  series.forEach(se=>{
+    const w=16+se.name.length*6.2+14;
+    if(lx+w>W-pR && lx>pL){ lx=pL; ly+=16; }
+    s+=`<rect x="${lx}" y="${(ly-9).toFixed(1)}" width="11" height="11" rx="2" fill="${se.color}"/>`;
+    s+=`<text x="${lx+16}" y="${ly.toFixed(1)}" font-size="10" fill="#475569" font-family="system-ui,sans-serif">${esc(se.name)}</text>`;
+    lx+=w;
+  });
+  svg.innerHTML=s;
+}
+
+document.getElementById('btn-add').addEventListener('click',addToCompare);
+document.getElementById('btn-cmp-clear').addEventListener('click',clearCompare);
+document.getElementById('cmp-chart-toggle').addEventListener('change',renderCompareChart);
+document.getElementById('cmp-list').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]'), dl=e.target.closest('[data-del]');
+  if(ed) loadForEdit(+ed.dataset.edit);
+  else if(dl) removeCompare(+dl.dataset.del);
+});
+document.getElementById('btn-cmp-pdf').addEventListener('click',()=>{
+  document.getElementById('pf-date').textContent=new Date().toLocaleDateString('ru-RU');
+  document.body.classList.add('print-compare');
+  window.print();
+  document.body.classList.remove('print-compare');
+});
+
+// ═══ INIT ═══
+syncName(); render();
+</script>
+</body>
+</html>
