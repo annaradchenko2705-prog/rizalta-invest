@@ -498,7 +498,6 @@ function calc(p, d={}) {
   // если год начала продаж в прошлом — стартуем от текущего года, прошлый рост не считаем.
   const start   = Math.max(p.sale, nowY);         // год покупки = старт таймлайна
   const done    = p.done;        // год сдачи объекта = старт аренды
-  const postEnd = done + 1;      // фаза «после сдачи»: сам год сдачи + следующий (2 года go), затем 0%
   // доля роста за год покупки: за остаток текущего года (по месяцам); для будущей покупки — полный год
   const fracYr  = start === nowY ? (12 - nowMon) / 12 : 1;
 
@@ -507,10 +506,8 @@ function calc(p, d={}) {
 
   for (let i = 0; i < N; i++) {
     const yr = start + i;
-    // фаза роста стоимости: стройка (до года сдачи) → год сдачи и следующий по ставке go → 0%
-    const fullG = yr < done     ? gc      // полные годы стройки ДО года сдачи
-                : yr <= postEnd ? go      // год сдачи + следующий (ставка «после сдачи»)
-                : 0;
+    // фаза роста стоимости: стройка (до года сдачи) по gc → со сдачи и далее по go бессрочно
+    const fullG = yr < done ? gc : go;
     // вход в середине года — рост за оставшиеся месяцы только в год покупки
     const g = yr === start ? fullG * fracYr : fullG;
     const ap = Math.round(pv * g / 100);
@@ -538,7 +535,32 @@ function calc(p, d={}) {
     }
   });
 
-  const flows = [-inv, ...rows.map(r=>r.profit)];
+  // ── Денежный поток с учётом РАССРОЧКИ ──
+  // капитал заводится постепенно: первый взнос + ежемесячные платежи за срок рассрочки,
+  // ремонт — в год сдачи. Без рассрочки (срок=0) вся цена уходит в год покупки.
+  const down = Math.round(p.price * clamp(p.down, 0, 100) / 100);
+  const rest = p.price - down;
+  const perMonth = p.inst > 0 ? rest / p.inst : 0;
+  const capOut = new Array(N).fill(0);
+  if (p.inst > 0) {
+    capOut[0] += down;                                  // первый взнос — в год покупки
+    let mLeft = p.inst;
+    for (let i = 0; i < N && mLeft > 0; i++) {
+      const monthsThisYr = (i === 0 && start === nowY) ? Math.max(0, 12 - nowMon) : 12;
+      const m = Math.min(mLeft, monthsThisYr);
+      capOut[i] += perMonth * m;
+      mLeft -= m;
+    }
+    if (mLeft > 0) capOut[N-1] += perMonth * mLeft;     // остаток рассрочки за горизонтом — в последний год
+  } else {
+    capOut[0] = p.price;                                // без рассрочки — вся цена сразу
+  }
+  const doneIdx = clamp(done - start, 0, N - 1);
+  capOut[doneIdx] += p.renov;                           // ремонт — в год сдачи
+  rows.forEach((r, i) => r.capOut = capOut[i]);
+
+  // годовой денежный поток = прибыль года − вложенный в этом году капитал
+  const flows = rows.map((r, i) => r.profit - capOut[i]);
   return {rows, irr:irr(flows), pb, inv, N};
 }
 
@@ -831,13 +853,10 @@ function renderPropTbl(base, price0, start, done, endYr){
     const r=base.rows.find(r=>r.yr===yr-1);
     return r ? r.pv : price0;
   };
-  // последний год, где стоимость ещё меняется (рост идёт до postEnd=done+1,
-  // отображается на начало следующего года → +1)
-  const lastChange = Math.min(done + 2, endYr);
+  // рост стоимости идёт каждый год (15% на стройке, 10% после сдачи) — показываем весь горизонт
   const yrs=[];
-  for(let y=firstYr; y<=lastChange; y++) yrs.push(y);
-  if(endYr>lastChange) yrs.push(endYr);          // финальный год горизонта
-  if(yrs.length===0) yrs.push(firstYr);          // подстраховка: рост уже закончился
+  for(let y=firstYr; y<=endYr; y++) yrs.push(y);
+  if(yrs.length===0) yrs.push(firstYr);
 
   const baseVal = valAt(firstYr);                // базис для «роста»
   // формат процента с десятичной половиной (рус. запятая): +7,5% / +15% (без ,0)
