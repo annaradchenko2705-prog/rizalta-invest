@@ -110,6 +110,25 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .chart-tip .ct-pb{color:#94a3b8;font-size:10px;margin-left:6px}
 .chart-tip .ct-foot{margin-top:5px;padding-top:5px;border-top:1px solid #334155;color:#cbd5e1;font-size:10px}
 
+/* всплывающее пояснение логики расчёта по показателям */
+.has-explain{cursor:help;position:relative}
+.has-explain.metric,.metric.has-explain{cursor:help}
+.has-explain::after{content:'?';position:absolute;top:2px;right:3px;width:12px;height:12px;
+  font-size:8px;font-weight:800;line-height:12px;text-align:center;color:#fff;background:#94a3b8;
+  border-radius:50%;opacity:.55;transition:opacity .12s;pointer-events:none}
+.has-explain:hover::after{opacity:1;background:var(--base)}
+.badge.has-explain::after{top:-3px;right:-3px}
+.card-big.has-explain::after{top:6px;right:0}
+.explain-tip{position:fixed;z-index:60;max-width:320px;opacity:0;visibility:hidden;transition:opacity .1s;
+  background:#0f172a;color:#e2e8f0;border-radius:11px;padding:11px 13px;font-size:12px;line-height:1.5;
+  box-shadow:0 10px 34px rgba(0,0,0,.32);border:1px solid #1e293b}
+.explain-tip.on{opacity:1;visibility:visible}
+.explain-tip .ex-t{font-weight:800;font-size:12.5px;color:#fff;margin-bottom:6px;letter-spacing:.01em}
+.explain-tip .ex-f{background:#1e293b;border-radius:6px;padding:5px 7px;margin:5px 0;font-size:11px;color:#cbd5e1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.explain-tip .ex-r{margin-top:7px;padding-top:6px;border-top:1px solid #334155;font-weight:800;color:#34d399}
+.explain-tip b{color:#fff}
+@media print{.has-explain::after{display:none}.explain-tip{display:none!important}}
+
 /* ── TABLE ── */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);border-bottom:2px solid var(--border)}
@@ -481,6 +500,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
   Дата: <span id="pf-date"></span>
 </div>
 
+<div id="explain-tip" class="explain-tip"></div>
 <script>
 // ═══ ENGINE ═══
 function calc(p, d={}) {
@@ -645,18 +665,77 @@ function render(){
   const firstFrac = start === new Date().getFullYear() ? (12 - nowMon) / 12 : 1;
   const firstPct = +(p.gc * firstFrac).toFixed(1);
   document.getElementById('d-growth').textContent =
-    `${firstPct}% (остаток ${start}) → ${p.gc}%/год → ${p.go}% → 0%`;
+    `${firstPct}% (остаток ${start}) → ${p.gc}%/год (стройка) → ${p.go}%/год (после сдачи)`;
   document.getElementById('rc-chart-h').textContent =
     `Накопленная прибыль по сценариям, ${start}–${endYr}`;
 
+  // ── Пояснения логики расчёта по derived-показателям (всплывают при наведении) ──
+  const perMo = p.inst>0 ? Math.round((p.price-dn)/p.inst) : 0;
+  setExpl('d-total',
+    `<div class="ex-t">Итого вложений</div>Стоимость объекта плюс ремонт под ключ.`+
+    `<div class="ex-f">${fR(p.price)} + ${fR(p.renov)}</div>`+
+    `<div class="ex-r">= ${fR(inv)}</div>`);
+  setExpl('d-sqm',
+    `<div class="ex-t">Цена за м²</div>Стоимость объекта ÷ площадь.`+
+    `<div class="ex-f">${fR(p.price)} ÷ ${p.area} м²</div>`+
+    `<div class="ex-r">= ${p.area>0?fR(p.price/p.area):'—'}</div>`);
+  setExpl('d-down',
+    `<div class="ex-t">Первый взнос</div>Доля стоимости, которую вносят сразу при покупке.`+
+    `<div class="ex-f">${fR(p.price)} × ${p.down}%</div>`+
+    `<div class="ex-r">= ${fR(dn)}</div>`);
+  setExpl('d-rest',
+    `<div class="ex-t">Остаток в рассрочку</div>Стоимость минус первый взнос, разбивается на платежи.`+
+    `<div class="ex-f">${fR(p.price)} − ${fR(dn)} = ${fR(p.price-dn)}<br>${fR(perMo)}/мес × ${p.inst} мес</div>`+
+    `<div class="ex-r">= ${fR(p.price-dn)}</div>`);
+  setExpl('d-growth',
+    `<div class="ex-t">Рост стоимости объекта</div>`+
+    `На стройке стоимость растёт быстрее, после сдачи — стабильно:`+
+    `<div class="ex-f">${firstPct}% — остаток ${start} (вход в середине года)<br>`+
+    `${p.gc}%/год — годы стройки (до ${done})<br>`+
+    `${p.go}%/год — с года сдачи ${done} и далее</div>`+
+    `Прирост каждого года считается от уже накопленной стоимости (сложный процент).`);
+
   // Cards
+  const nm = {p:'Пессимистичный', b:'Базовый', o:'Оптимистичный'};
   [['p',sc.p],['b',sc.b],['o',sc.o]].forEach(([k,s])=>{
     const cumN = s.rows[s.rows.length-1]?.cum ?? 0;
-    const rM   = (s.rows.find(r=>r.yr===mYear)?.net ?? 0)/12;
+    const mRow = s.rows.find(r=>r.yr===mYear);
+    const rM   = (mRow?.net ?? 0)/12;
     document.getElementById(`c-${k}-irr`).textContent = 'IRR '+fPct(s.irr*100);
     document.getElementById(`c-${k}-cum`).textContent = fM(cumN);
     document.getElementById(`c-${k}-pb`).textContent  = fYr(s.pb);
     document.getElementById(`c-${k}-r33`).textContent = fR(Math.round(rM));
+
+    // ── Пояснения по карточке (${nm[k]}) ──
+    const sumNet = s.rows.reduce((a,r)=>a+r.net,0);
+    const sumAp  = s.rows.reduce((a,r)=>a+r.ap,0);
+    const f0 = s.rows[0], f1 = s.rows[1], f2 = s.rows[2];
+    const fl = r => fM(r.profit - r.capOut);
+    setExpl(`c-${k}-irr`,
+      `<div class="ex-t">IRR — ${nm[k]}</div>`+
+      `Внутренняя норма доходности: ставка r, при которой сумма всех потоков, приведённых к сегодня, равна нулю.`+
+      `<div class="ex-f">поток года = прибыль − вложения года (рассрочка)<br>`+
+      `${f0.yr}: ${fM(f0.profit)} − ${fM(f0.capOut)} = ${fl(f0)}<br>`+
+      `${f1.yr}: ${fl(f1)}   ${f2.yr}: ${fl(f2)}   …</div>`+
+      `Σ потокₜ ÷ (1+r)ᵗ = 0, r ищется численно (метод Ньютона).`+
+      `<div class="ex-r">IRR = ${fPct(s.irr*100)}</div>`);
+    setExpl(`c-${k}-cum`,
+      `<div class="ex-t">Накопл. прибыль за ${N} лет — ${nm[k]}</div>`+
+      `Сумма прибыли за все годы. Прибыль года = чистая аренда + прирост стоимости.`+
+      `<div class="ex-f">аренда за ${N} лет: ${fR(sumNet)}<br>прирост стоимости: ${fR(sumAp)}</div>`+
+      `<div class="ex-r">= ${fM(cumN)}</div>`);
+    setExpl(`c-${k}-pb`,
+      `<div class="ex-t">Окупаемость с капитализацией — ${nm[k]}</div>`+
+      `Год, когда накопленная прибыль (аренда + прирост стоимости) покроет вложения.`+
+      `<div class="ex-f">вложения = цена + ремонт = ${fR(inv)}<br>`+
+      `считаем нарастающим итогом, год пересечения — с интерполяцией по месяцам</div>`+
+      `<div class="ex-r">≈ ${fYr(s.pb)}</div>`);
+    if(mRow) setExpl(`c-${k}-r33`,
+      `<div class="ex-t">Чистый доход/мес к ${mYear} — ${nm[k]}</div>`+
+      `Доход от сдачи в аренду после расходов УК, в расчёте на месяц.`+
+      `<div class="ex-f">валовый = ${fR(mRow.rate)}/сут × 360 × ${mRow.occ}% загрузка = ${fR(mRow.gross)}<br>`+
+      `чистый = валовый × (1 − ${p.exp}% расходы) = ${fR(mRow.net)}<br>÷ 12 мес</div>`+
+      `<div class="ex-r">= ${fR(Math.round(rM))}/мес</div>`);
   });
 
   renderChart(sc, inv, mYear);
@@ -1151,8 +1230,60 @@ document.getElementById('btn-cmp-pdf').addEventListener('click',()=>{
   document.body.classList.remove('print-compare');
 });
 
+// ═══ ПОЯСНЕНИЯ ЛОГИКИ РАСЧЁТА (hover/tap) ═══
+const EXPL = {};                       // id показателя → HTML с логикой
+function setExpl(id, html){
+  EXPL[id] = html;
+  const el = document.getElementById(id);
+  if(el) el.classList.add('has-explain');
+}
+let exTip = null, exPinned = false;
+function exPos(x, y){
+  const m = 12, w = exTip.offsetWidth, h = exTip.offsetHeight;
+  let left = x + 14, top = y + 16;
+  if(left + w > innerWidth - m)  left = x - w - 14;
+  if(left < m) left = m;
+  if(top + h > innerHeight - m)  top = y - h - 16;
+  if(top < m) top = m;
+  exTip.style.left = left + 'px';
+  exTip.style.top  = top + 'px';
+}
+function exShow(el, x, y){
+  const html = EXPL[el.id]; if(!html) return;
+  exTip.innerHTML = html;
+  exTip.classList.add('on');
+  exPos(x, y);
+}
+function exHide(){ exTip.classList.remove('on'); exPinned = false; }
+function initExplain(){
+  exTip = document.getElementById('explain-tip');
+  document.addEventListener('mouseover', e=>{
+    if(exPinned) return;
+    const el = e.target.closest('.has-explain');
+    if(el) exShow(el, e.clientX, e.clientY);
+    else if(!e.target.closest('#explain-tip')) exTip.classList.remove('on');
+  });
+  document.addEventListener('mousemove', e=>{
+    if(exPinned || !exTip.classList.contains('on')) return;
+    const el = e.target.closest('.has-explain');
+    if(el) exPos(e.clientX, e.clientY);
+  });
+  // тап на телефоне — закрепляет/убирает пояснение
+  document.addEventListener('click', e=>{
+    const el = e.target.closest('.has-explain');
+    if(el){
+      const r = el.getBoundingClientRect();
+      exShow(el, r.left + r.width/2, r.bottom);
+      exPinned = true;
+      e.stopPropagation();
+    } else if(!e.target.closest('#explain-tip')){
+      exHide();
+    }
+  });
+}
+
 // ═══ INIT ═══
-syncName(); render();
+syncName(); render(); initExplain();
 </script>
 </body>
 </html>
