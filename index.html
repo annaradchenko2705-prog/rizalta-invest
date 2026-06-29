@@ -413,7 +413,12 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:linear
           <div class="p-row"><label class="p-lbl">Сдача объекта (год)</label><input class="p-in" type="number" id="p-done" value="2029" step="1" min="2000" max="2100"></div>
           <div class="p-row"><label class="p-lbl">Рост в годы стройки, %/год</label><input class="p-in" type="number" id="p-gc" value="15" step="1" min="0" max="40"></div>
           <div class="p-row"><label class="p-lbl">Рост 2 года после сдачи, %/год</label><input class="p-in" type="number" id="p-go" value="10" step="1" min="0" max="30"></div>
-          <div class="p-calc" style="margin-bottom:9px"><span>После — рост 0% (фикс.)</span><strong id="d-growth">—</strong></div>
+          <div class="p-calc" style="margin-bottom:9px"><span>Рост стоимости</span><strong id="d-growth">—</strong></div>
+          <button type="button" id="mg-toggle" class="btn" style="width:100%;margin-bottom:9px;justify-content:center">⚙ Настроить рост по годам</button>
+          <div id="mg-wrap" style="display:none;margin-bottom:9px">
+            <div id="mg-rows"></div>
+            <button type="button" id="mg-reset" class="btn" style="width:100%;margin-top:7px;justify-content:center">↺ Сбросить к авто</button>
+          </div>
           <div class="p-row"><label class="p-lbl">Загрузка в 1-й год аренды, %</label><input class="p-in" type="number" id="p-occ0" value="30" step="5" min="5" max="70"></div>
           <div class="p-row"><label class="p-lbl">Максимальная загрузка, %</label><input class="p-in" type="number" id="p-occm" value="70" step="5" min="20" max="95"></div>
           <div class="p-row"><label class="p-lbl">Горизонт расчёта, лет</label><input class="p-in" type="number" id="p-hz" value="12" step="1" min="3" max="20"></div>
@@ -521,18 +526,16 @@ function calc(p, d={}) {
   // если год начала продаж в прошлом — стартуем от текущего года, прошлый рост не считаем.
   const start   = Math.max(p.sale, nowY);         // год покупки = старт таймлайна
   const done    = p.done;        // год сдачи объекта = старт аренды
-  // доля роста за год покупки: за остаток текущего года (по месяцам); для будущей покупки — полный год
-  const fracYr  = start === nowY ? (12 - nowMon) / 12 : 1;
-
   let pv = p.price, rate = p.daily;
   const rows = [];
 
   for (let i = 0; i < N; i++) {
     const yr = start + i;
-    // фаза роста стоимости: стройка (до года сдачи) по gc → со сдачи и далее по go бессрочно
-    const fullG = yr < done ? gc : go;
-    // вход в середине года — рост за оставшиеся месяцы только в год покупки
-    const g = yr === start ? fullG * fracYr : fullG;
+    // фаза роста: авто-ставка (стройка gc / после сдачи go), полный год без пропорции
+    const auto = yr < done ? gc : go;
+    // ручной рост по году перекрывает авто; дельта сценария применяется по фазе
+    const mg = (p.manualGrowth && p.manualGrowth[yr] != null) ? p.manualGrowth[yr] : null;
+    const g = mg != null ? clamp(mg + (yr < done ? (d.gc||0) : (d.go||0)), 0, 50) : auto;
     const ap = Math.round(pv * g / 100);
     pv += ap;
 
@@ -629,6 +632,9 @@ function fYr(y){
 }
 function fPct(v){return (Math.round(v*10)/10)+'%'}
 
+// Ручной рост стоимости по годам: { 2026: 15, 2030: 12 }. Пустой = всё авто.
+let manualGrowth = {};
+
 // ═══ PARAMS ═══
 function gp(){
   const v=id=>parseFloat(document.getElementById(id).value)||0;
@@ -639,6 +645,7 @@ function gp(){
     sale:v('p-sale'), done:v('p-done'),
     gc:v('p-gc'), go:v('p-go'), occ0:v('p-occ0'), occm:v('p-occm'),
     hz:v('p-hz'),
+    manualGrowth,
   };
 }
 
@@ -663,12 +670,12 @@ function render(){
   const mYear = Math.min(done + 4, endYr);         // ключевой год для карточек / точек графика
   document.querySelectorAll('.m-yr').forEach(el => el.textContent = mYear);
   document.querySelectorAll('.m-hz').forEach(el => el.textContent = N);
-  // доля роста за первый (текущий) год — как в движке, по оставшимся месяцам
-  const nowMon = new Date().getMonth() + 1;
-  const firstFrac = start === new Date().getFullYear() ? (12 - nowMon) / 12 : 1;
-  const firstPct = +(p.gc * firstFrac).toFixed(1);
+  // годы с ручным ростом (в пределах горизонта) — для подписи
+  const mgYears = Object.keys(manualGrowth).map(Number)
+                    .filter(y => y >= start && y <= endYr).sort((a,b)=>a-b);
+  const mgNote  = mgYears.length ? ` · вручную: ${mgYears.join(', ')}` : '';
   document.getElementById('d-growth').textContent =
-    `${firstPct}% (остаток ${start}) → ${p.gc}%/год (стройка) → ${p.go}%/год (после сдачи)`;
+    `${p.gc}%/год (стройка) → ${p.go}%/год (после сдачи)${mgNote}`;
   document.getElementById('rc-chart-h').textContent =
     `Накопленная прибыль по сценариям, ${start}–${endYr}`;
 
@@ -693,10 +700,16 @@ function render(){
   setExpl('d-growth',
     `<div class="ex-t">Рост стоимости объекта</div>`+
     `На стройке стоимость растёт быстрее, после сдачи — стабильно:`+
-    `<div class="ex-f">${firstPct}% — остаток ${start} (вход в середине года)<br>`+
-    `${p.gc}%/год — годы стройки (до ${done})<br>`+
-    `${p.go}%/год — с года сдачи ${done} и далее</div>`+
-    `Прирост каждого года считается от уже накопленной стоимости (сложный процент).`);
+    `<div class="ex-f">${p.gc}%/год — годы стройки (до ${done})<br>`+
+    `${p.go}%/год — с года сдачи ${done} и далее`+
+    `${mgYears.length ? `<br>вручную задан рост: ${mgYears.join(', ')}` : ''}</div>`+
+    `Прирост каждого года считается от уже накопленной стоимости (сложный процент). `+
+    `Любой год можно переопределить вручную кнопкой «Настроить рост по годам».`);
+  // если панель ручного роста открыта — держим плейсхолдеры (авто-значения) актуальными
+  document.querySelectorAll('#mg-rows .mg-in').forEach(el=>{
+    const yr = +el.dataset.yr;
+    el.placeholder = (yr < done ? p.gc : p.go);
+  });
 
   // Cards
   const nm = {p:'Пессимистичный', b:'Базовый', o:'Оптимистичный'};
@@ -969,11 +982,61 @@ function renderPropTbl(base, price0, start, done, endYr){
   document.getElementById('tbl-prop').innerHTML=h+'</tbody>';
 }
 
+// Строит поля «год → % роста» для ручного переопределения. Пустое поле = авто.
+function buildMgRows(){
+  const p   = gp();
+  const sc  = calc(p, {});
+  const start = sc.rows[0].yr;
+  const endYr = sc.rows[sc.rows.length-1].yr;
+  const done  = p.done;
+  let h = '';
+  for (let yr = start; yr <= endYr; yr++){
+    const auto = yr < done ? p.gc : p.go;
+    const val  = manualGrowth[yr] != null ? manualGrowth[yr] : '';
+    h += `<div class="p-row" style="display:flex;align-items:center;gap:8px;margin-top:5px">`+
+         `<label class="p-lbl" style="min-width:54px;margin:0">${yr}</label>`+
+         `<input class="p-in mg-in" type="number" data-yr="${yr}" value="${val}" placeholder="${auto}" step="1" min="0" max="50" style="flex:1">`+
+         `<span style="color:var(--text3);font-size:12px">%/год</span></div>`;
+  }
+  const box = document.getElementById('mg-rows');
+  box.innerHTML = h;
+  box.querySelectorAll('.mg-in').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      const yr = +el.dataset.yr;
+      const v  = el.value.trim();
+      if (v === '') delete manualGrowth[yr];
+      else manualGrowth[yr] = parseFloat(v) || 0;
+      render();
+    });
+  });
+}
+
 // ═══ SECTION TOGGLE ═══
 function tog(id){document.getElementById(id).classList.toggle('open')}
 
 // ═══ EVENTS ═══
 document.querySelectorAll('.p-in').forEach(el=>el.addEventListener('input',render));
+
+// Ручной рост по годам: открыть/закрыть панель, пересобрать поля, сбросить
+document.getElementById('mg-toggle').addEventListener('click',()=>{
+  const w = document.getElementById('mg-wrap');
+  const open = w.style.display === 'none';
+  w.style.display = open ? 'block' : 'none';
+  document.getElementById('mg-toggle').textContent =
+    open ? '⚙ Скрыть рост по годам' : '⚙ Настроить рост по годам';
+  if (open) buildMgRows();
+});
+document.getElementById('mg-reset').addEventListener('click',()=>{
+  manualGrowth = {};
+  buildMgRows();
+  render();
+});
+// при смене годов/горизонта — пересобрать поля, если панель открыта
+['p-sale','p-done','p-hz'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    if (document.getElementById('mg-wrap').style.display !== 'none') buildMgRows();
+  });
+});
 
 // project name → header + print footer + title
 function syncName(){
@@ -1003,6 +1066,8 @@ document.getElementById('btn-reset').addEventListener('click',()=>{
   set('p-sale',2026); set('p-done',2029);
   set('p-gc',15); set('p-go',10); set('p-occ0',30); set('p-occm',70);
   set('p-hz',12);
+  manualGrowth = {};
+  if (document.getElementById('mg-wrap').style.display !== 'none') buildMgRows();
   document.querySelectorAll('.blk-cb').forEach(cb=>{cb.checked=true;cb.closest('.card,.rc').classList.remove('off')});
   syncName(); render();
 });
@@ -1081,6 +1146,8 @@ function loadForEdit(id){
   set('p-sale',p.sale); set('p-done',p.done);
   set('p-gc',p.gc); set('p-go',p.go); set('p-occ0',p.occ0); set('p-occm',p.occm);
   set('p-hz',p.hz);
+  manualGrowth = {};
+  if (document.getElementById('mg-wrap').style.display !== 'none') buildMgRows();
   editId=id; setAddBtnLabel();
   syncName(); render(); renderCompare();
   document.querySelector('.main').scrollIntoView({behavior:'smooth',block:'start'});
